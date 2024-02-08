@@ -142,33 +142,27 @@ export class AppComponent implements AfterViewInit {
 
   initializeThreeJS() {
 
-    // Scene
     this.scene = new THREE.Scene();
 
-    // Camera
-    const fov = 75; // Field of View
-    const aspect = window.innerWidth / window.innerHeight; // Aspect ratio
-    const near = 0.1; // Near clipping plane
-    const far = 1000; // Far clipping plane
+    const fov = 75; 
+    const aspect = window.innerWidth / window.innerHeight; 
+    const near = 0.1; 
+    const far = 1000; 
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    this.camera.position.z = 5; // Adjust as needed
+    this.camera.position.z = 5; 
 
-    // Renderer
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas.nativeElement, alpha: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     console.log('Size: ', window.innerWidth, window.innerHeight);
 
-    // Resize listener to adjust camera aspect ratio and renderer size
     window.addEventListener('resize', () => {
       this.camera!.aspect = window.innerWidth / window.innerHeight;
       this.camera!.updateProjectionMatrix();
       this.renderer!.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Load the watch model
     this.loadWatchModel();
 
-    // Start the animation loop
     this.animate();
 
   }
@@ -178,42 +172,30 @@ export class AppComponent implements AfterViewInit {
 
 
     loader.load('assets/models/bracelet/bracelet.obj', (obj) => {
-      // Assuming 'obj' is your watch model
       this.watchModel = obj;
 
-      // Compute the bounding box of the model
       const box = new THREE.Box3().setFromObject(this.watchModel);
 
-      // Calculate the center of the bounding box
       const center = box.getCenter(new THREE.Vector3());
 
-      // Translate the model's geometry so that the center of the bounding box is at the origin
       this.watchModel.position.sub(center);
 
-      // Set the position of the watch model
-      // You might want to adjust this based on the specific hand landmarks
-      this.watchModel.position.set(0, 0, 0); // Adjust as necessary
+      this.watchModel.position.set(0, 0, 0); 
 
-      // Scale the model to fit the wrist width
-      // This requires converting wrist width from normalized units to Three.js units
       const scale = this.calculateModelScale(this.wristWidth);
 
       this.watchModel.scale.set(scale, scale, scale);
 
-      // Add the model to the scene
       this.scene!.add(this.watchModel);
 
-      // Add a directional light
       const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(5, 5, 5); // Adjust as needed
+      directionalLight.position.set(5, 5, 5);
       this.scene!.add(directionalLight);
 
-      // Add an ambient light for softer shadows and indirect lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Adjust the color and intensity as needed
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); 
       this.scene!.add(ambientLight);
 
 
-      // Update the model orientation
       this.updateModelOrientation();
     }, (p) => {
 
@@ -270,36 +252,26 @@ export class AppComponent implements AfterViewInit {
 
     const initialQuaternion = new THREE.Quaternion(1,0,1);
 
-    // Set the watch model's quaternion to the initial quaternion
     this.watchModel.quaternion.copy(initialQuaternion);
 
-    // Calculate the direction of the forearm
     const forearmDirection = this.normalize(this.vectorBetween(elbowPose, wristPose));
 
-    // Calculate the direction the top of the hand is facing
     const handDirection = this.normalize(this.vectorBetween(thumbPose, littleFingerPose));
 
-    // Use the forearm direction as the up vector for the watch
     const up = forearmDirection;
 
-    // Use the negative hand direction as the forward vector for the watch
     const forward = this.negate(handDirection);
 
-    // Calculate the right vector as the cross product of the up and forward vectors
     const right = this.crossProduct(up, forward);
 
-    // Create a quaternion from the right, up, and forward vectors
     const targetQuaternion = this.quaternionFromVectors(right, up, forward);
 
-    // Smoothly update the model's rotation to the target quaternion
-    this.watchModel.quaternion.slerp(targetQuaternion, 1); // Adjust the lerp factor as needed for smoothness
+    this.watchModel.quaternion.slerp(targetQuaternion, 1);
   }
 
   updateModelScale() {
     if (!this.watchModel) return;
 
-    // Scale the model to fit the wrist width
-    // This requires converting wrist width from normalized units to Three.js units
     const scale = this.calculateModelScale(this.wristWidth);
     this.watchModel.scale.set(scale, scale, scale);
   }
@@ -345,8 +317,6 @@ export class AppComponent implements AfterViewInit {
     let startTimeMs = performance.now();
     if (this.lastVideoTime !== video.currentTime) {
       this.lastVideoTime = video.currentTime;
-      // this.results = this.handLandmarker.detectForVideo(video, startTimeMs);
-      // this.poseResult = this.poseLandmarker.detectForVideo(video, startTimeMs);
       const ls = await Promise.all([
         Promise.resolve(this.handLandmarker.detectForVideo(video, startTimeMs)), 
         Promise.resolve(this.poseLandmarker.detectForVideo(video, startTimeMs))
@@ -369,7 +339,6 @@ export class AppComponent implements AfterViewInit {
 
         this.processWorldLandmarks(this.results.worldLandmarks[0]);
 
-        // Calculate the hand position
         this.calculateHandPosition();
 
         this.changeDetectorRef.detectChanges();
@@ -452,36 +421,24 @@ export class AppComponent implements AfterViewInit {
   }
 
   calculateHandPosition() { 
-    // Assuming `wristLandmark` is the wrist landmark from MediaPipe's HandLandmarker
-    // and `camera` is your Three.js PerspectiveCamera
 
-    // Example wrist landmark from MediaPipe
-    const wristLandmark = this.results?.landmarks[0][0]; // Landmark 0 is usually the wrist
+    const wristLandmark = this.results?.landmarks[0][0]; 
 
     if (!wristLandmark) {
-      return; // Make sure the wrist landmark is available
+      return;
     }
 
-    // Convert normalized coordinates to screen space (assuming fullscreen canvas)
     const xScreen = wristLandmark.x * window.innerWidth;
     const yScreen = wristLandmark.y * window.innerHeight
 
-    // Convert screen space to Three.js world space
     const vector = new THREE.Vector3(
       (xScreen / window.innerWidth) * 2 - 1,
       -(yScreen / window.innerHeight) * 2 + 1,
       0.5
     );
 
-    vector.unproject(this.camera!); // Unproject to get the position in world space
-
-    // Assuming `watchModel` is your Three.js Object3D for the watch
-    // Set the model's position to the wrist's world space position
+    vector.unproject(this.camera!); 
     this.watchModel!.position.set(vector.x, vector.y, vector.z);
-
-    // Adjust Z position based on your scene setup or camera distance
-    // You might need to manually adjust this based on the depth of your scene and the size of the watch model
-    // this.watchModel!.position.z = -5;
 
   }
 
